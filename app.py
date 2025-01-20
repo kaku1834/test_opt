@@ -110,23 +110,41 @@ if auth_status:
     raw_filtered = filter_data_sequentially(raw_filtered, start_date=start_date, end_date=end_date)
 
     # Get unique product information for the selected Syuyaku
-    raw_unique = raw.unique(subset=['Department', 'Syuyaku', 'SKU', 'Color', 'Size', 'Length']).select(['Department', 'Syuyaku', 'Tanpin', 'Color', 'Size', 'Length'])
+    raw_unique = raw.unique(subset=['Department', 'Syuyaku', 'SKU', 'Color', 'Size', 'Length'])
+    raw_unique = raw_unique.select(['Department', 'Syuyaku', 'Tanpin', 'Color', 'Size', 'Length'])
     ProductInfo = raw_unique.filter(pl.col('Syuyaku') == selected_Syuyaku)
+
+    # Polars DataFrameからPandas DataFrameへの変換を修正
     ProductInfoDF = ProductInfo.to_pandas()
-    ProductInfoDF.columns = ['部門', '販売集約', '単品', 'カラー',  'サイズ',  'レングス']
+    ProductInfoDF.columns = ['部門', '販売集約', '単品', 'カラー', 'サイズ', 'レングス']
+
+    # NaN値の処理を追加
+    ProductInfoDF = ProductInfoDF.fillna('')  # NaN値を空文字列に変換
 
     # Filter summary tables for selected Syuyaku
-    AccuracySummaryDF = AccuracySummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:]
-    ProblemSummaryDF = ProblemSummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:]
+    AccuracySummaryDF = AccuracySummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:].fillna('')
+    ProblemSummaryDF = ProblemSummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:].fillna('')
 
     st.title('商品属性情報')
-    ui.table(ProductInfoDF)
+    try:
+        ui.table(ProductInfoDF)
+    except Exception as e:
+        st.error(f"テーブル表示エラー: {str(e)}")
+        st.write(ProductInfoDF)  # フォールバックとして標準のStreamlit表示を使用
 
     st.title("精度サマリ")
-    ui.table(AccuracySummaryDF)       
+    try:
+        ui.table(AccuracySummaryDF)
+    except Exception as e:
+        st.error(f"テーブル表示エラー: {str(e)}")
+        st.write(AccuracySummaryDF)
     
     st.title("既存課題検知結果サマリ")
-    ui.table(ProblemSummaryDF)
+    try:
+        ui.table(ProblemSummaryDF)
+    except Exception as e:
+        st.error(f"テーブル表示エラー: {str(e)}")
+        st.write(ProblemSummaryDF)
     
     st.title("課題検知のための情報の可視化")
 
