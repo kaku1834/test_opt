@@ -41,13 +41,18 @@ def cached_load_data():
 
 # キャッシュ付きの集計関数
 @st.cache_data
-def cached_get_most_syuyaku(raw):
-    return get_most_syuyaku(raw)
+def cached_get_most_syuyaku(_raw):
+    return get_most_syuyaku(_raw)
 
 # キャッシュ付きのユニーク値取得
 @st.cache_data
-def cached_get_sorted_unique_values(data, column):
-    return get_sorted_unique_values(data, column)
+def cached_get_sorted_unique_values(_data, column):
+    return get_sorted_unique_values(_data, column)
+
+# さらなる最適化として、データフレームの変換処理もキャッシュ
+@st.cache_data
+def cached_prepare_visualization_data(_raw_filtered, _dateInfo, _rate, selected_Region, selected_Syuyaku):
+    return prepare_visualization_data(_raw_filtered, _dateInfo, _rate, selected_Region, selected_Syuyaku)
 
 # Main application logic
 if auth_status:
@@ -126,17 +131,9 @@ if auth_status:
     st.title("課題検知のための情報の可視化")
 
     # データ変換とプロット生成を最適化
-    if 'df_disp' not in st.session_state:
-        df_disp, df_real, df_pred, transform_timings = prepare_visualization_data(
-            raw_filtered, dateInfo, rate, selected_Region, selected_Syuyaku
-        )
-        st.session_state.df_disp = df_disp
-        st.session_state.df_real = df_real
-        st.session_state.df_pred = df_pred
-    else:
-        df_disp = st.session_state.df_disp
-        df_real = st.session_state.df_real
-        df_pred = st.session_state.df_pred
+    df_disp, df_real, df_pred, transform_timings = cached_prepare_visualization_data(
+        raw_filtered, dateInfo, rate, selected_Region, selected_Syuyaku
+    )
 
     # Measure data transformation time
     start_time = time.time()
