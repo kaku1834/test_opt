@@ -1,0 +1,14 @@
+credentials:
+  usernames:
+    user01:
+      email: user01@mail.com
+      name: user01
+      password: $2b$12$YCqDZFJxt1OK2XAG9wrRKuAfQXQgaQXF083d9ldmhF7md7BPcqWs6
+    user02:
+      email: user02@mail.com
+      name: user02
+      password: $2b$12$lQiPbziiJtj4CxSrXmNFz./rQ0x2N3ClogjuWdIUwZ9CuHK0gxt0S
+cookie:
+  expiry_days: 900
+  key: DashboardCookieKey # Must be string
+  name: DashboardCookieName

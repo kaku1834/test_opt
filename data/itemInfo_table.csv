@@ -1,0 +1,17 @@
+﻿Syuyaku,Dept,Ssn,Sub Category1,SalesSum_Code,SalesSum_Name,Sell Out Flag,Existing Product Flag,New Product Flag,LW_SKU_Plan_Option,SKU_Ttl,SKU_Forecast,SKU_Ratio,Official Plan,Sales Rank,Sales Start Date
+集約1,101,Fa,Pants,282934Z,Stretch Jeans,✓,✓,✓,Default Mode,20,10,0.5,"111,333",1,2023/7/1
+集約2,102,Sp,Shirts,839473K,Cotton Shirts,-,-,✓,-,15,8,0.53,"90,222",2,2023/7/5
+集約3,103,Su,Jackets,549837A,Winter Jackets,✓,✓,✓,Default Mode,30,15,0.5,"120,444",3,2023/8/1
+集約4,104,Au,T-Shirts,748295B,Graphic Tees,✓,✓,-,Default Mode,25,12,0.48,"80,333",4,2023/8/15
+集約5,105,Wi,Coats,938574C,Woolen Coats,,✓,✓,-,18,9,0.5,"130,000",5,2023/9/1
+集約6,106,Fa,Shoes,485930D,Running Shoes,✓,✓,✓,Default Mode,22,11,0.5,"100,555",6,2023/9/10
+集約7,107,Sp,Socks,239874E,Ankle Socks,✓,-,✓,-,50,25,0.5,"70,222",7,2023/10/1
+集約8,108,Su,Hats,739201F,Summer Hats,✓,✓,-,-,12,6,0.5,"60,000",8,2023/7/5
+集約9,109,Au,Scarves,492038G,Silk Scarves,-,✓,✓,-,10,5,0.5,"50,333",9,2023/8/1
+集約10,110,Wi,Gloves,837492H,Leather Gloves,✓,-,✓,Default Mode,14,7,0.5,"40,555",10,2023/8/15
+集約11,111,Fa,Belts,384930I,Formal Belts,✓,✓,✓,-,16,8,0.5,"35,222",11,2023/9/1
+集約12,112,Sp,Shorts,284930J,Sport Shorts,,✓,✓,-,20,10,0.5,"90,333",12,2023/7/5
+集約13,113,Su,Bags,874930K,Travel Bags,✓,✓,-,Default Mode,30,15,0.5,"150,444",13,2023/7/5
+集約14,114,Au,Watches,298374L,Analog Watches,-,✓,✓,-,8,4,0.5,"200,000",14,2023/8/1
+集約15,115,Wi,Sweaters,298374M,Wool Sweaters,-,-,✓,Default Mode,18,9,0.5,"125,555",15,2023/8/15
+集約16,116,Fa,Trousers,394873N,Casual Trousers,✓,✓,✓,Default Mode,25,12,0.48,"110,222",16,2023/9/1
