@@ -11,7 +11,6 @@ from modules.data_processor import get_most_syuyaku, get_sorted_unique_values, f
 from modules.visualizer import create_dashboard_figure
 from modules.data_transformer import prepare_visualization_data
 from modules.auth_utils import setup_page_config, initialize_authentication
-from functools import lru_cache
 
 # Setup page configuration
 setup_page_config()
@@ -34,71 +33,56 @@ def measure_time(step_name):
         return wrapper
     return decorator
 
-# キャッシュ付きのデータ読み込み関数
-@st.cache_data
-def cached_load_data():
-    return load_data()
-
-# キャッシュ付きの集計関数
-@st.cache_data
-def cached_get_most_syuyaku(_raw):
-    return get_most_syuyaku(_raw)
-
-# キャッシュ付きのユニーク値取得
-@st.cache_data
-def cached_get_sorted_unique_values(_data, column):
-    return get_sorted_unique_values(_data, column)
-
-# さらなる最適化として、データフレームの変換処理もキャッシュ
-@st.cache_data
-def cached_prepare_visualization_data(_raw_filtered, _dateInfo, _rate, selected_Region, selected_Syuyaku):
-    return prepare_visualization_data(_raw_filtered, _dateInfo, _rate, selected_Region, selected_Syuyaku)
-
 # Main application logic
 if auth_status:
-    # キャッシュを使用したデータ読み込み
-    raw, dateInfo, rate, metricTable, itemInfoTable, skuSummary, AccuracySummary, ProblemSummary = cached_load_data()
-    
-    # キャッシュを使用した初期処理
-    most_syuyaku_Brand, most_syuyaku_Region, most_syuyaku_Department, most_syuyaku_SubCategory, most_syuyaku = cached_get_most_syuyaku(raw)
-    
-    # フィルタリングでキャッシュを使用
-    sorted_Brand = cached_get_sorted_unique_values(raw, 'Brand')
+    # Measure data loading time
+    start_time = time.time()
+    raw, dateInfo, rate, metricTable, itemInfoTable, skuSummary, AccuracySummary, ProblemSummary = load_data()
+    timing_stats['データ読み込み'] = time.time() - start_time
+
+    # Measure initial processing time
+    start_time = time.time()
+    most_syuyaku_Brand, most_syuyaku_Region, most_syuyaku_Department, most_syuyaku_SubCategory, most_syuyaku = get_most_syuyaku(raw)
+    timing_stats['初期データ処理'] = time.time() - start_time
+
+    # Your filtering code now uses the imported functions
+    # フィルタ1: 事業を選択
+    sorted_Brand = get_sorted_unique_values(raw, 'Brand')
     selected_Brand = st.sidebar.selectbox("グローバル事業", sorted_Brand, index = sorted_Brand.index(most_syuyaku_Brand), key="brand_select")
     raw_filtered = filter_data_sequentially(raw, selected_Brand=selected_Brand)
 
     # フィルタ2: 事業を選択した上で、国を選択
-    sorted_Region = cached_get_sorted_unique_values(raw_filtered, 'Region')
+    sorted_Region = get_sorted_unique_values(raw_filtered, 'Region')
     selected_Region = st.sidebar.selectbox("事業国", sorted_Region, index = sorted_Region.index(most_syuyaku_Region), key="region_select")
     raw_filtered = filter_data_sequentially(raw_filtered, selected_Region=selected_Region)
 
     # フィルタ3: 事業と国選択した上で、部門を選択
-    sorted_Department = cached_get_sorted_unique_values(raw_filtered, 'Department')
+    sorted_Department = get_sorted_unique_values(raw_filtered, 'Department')
     selected_Department = st.sidebar.selectbox("部門", sorted_Department, index = sorted_Department.index(most_syuyaku_Department), key="dept_select")
     raw_filtered = filter_data_sequentially(raw_filtered, selected_Department=selected_Department)
 
     # フィルタ4: 事業、国、部門を選択した上で、サブカテゴリを選択
-    sorted_SubCategory = cached_get_sorted_unique_values(raw_filtered, 'SubCategory')
+    sorted_SubCategory = get_sorted_unique_values(raw_filtered, 'SubCategory')
     selected_SubCategory = st.sidebar.selectbox("サブカテゴリ", sorted_SubCategory, index = sorted_SubCategory.index(most_syuyaku_SubCategory), key="subcat_select")
     raw_filtered = filter_data_sequentially(raw_filtered, selected_SubCategory=selected_SubCategory)
 
     # フィルタ5: すべての以前の選択に基づいた集約の選択
-    sorted_Syuyaku = cached_get_sorted_unique_values(raw_filtered, 'Syuyaku')
+    sorted_Syuyaku = get_sorted_unique_values(raw_filtered, 'Syuyaku')
     selected_Syuyaku = st.sidebar.selectbox("販売集約", sorted_Syuyaku, key="syuyaku_select")
     raw_filtered = filter_data_sequentially(raw_filtered, selected_Syuyaku=selected_Syuyaku)
 
     # フィルタ6: 選択された集約のうち、サイズを選択
-    sorted_Size = cached_get_sorted_unique_values(raw_filtered, 'Size')
+    sorted_Size = get_sorted_unique_values(raw_filtered, 'Size')
     selected_Size = st.sidebar.multiselect("サイズ", sorted_Size, placeholder = "未入力の場合、全選択される", key="size_select")
     raw_filtered = filter_data_sequentially(raw_filtered, selected_Size=selected_Size)
 
     # フィルタ7: 選択された集約のうち、色を選択
-    sorted_Color = cached_get_sorted_unique_values(raw_filtered, 'Color')
+    sorted_Color = get_sorted_unique_values(raw_filtered, 'Color')
     selected_Color = st.sidebar.multiselect("カラー", sorted_Color, placeholder = "未入力の場合、全選択される", key="color_select")    
     raw_filtered = filter_data_sequentially(raw_filtered, selected_Color=selected_Color)
 
     # フィルタ8: 選択された集約のうち、SKUを選択
-    sorted_SKU = cached_get_sorted_unique_values(raw_filtered, 'SKU')
+    sorted_SKU = get_sorted_unique_values(raw_filtered, 'SKU')
     selected_SKU = st.sidebar.multiselect("SKU", sorted_SKU, placeholder = "未入力の場合、全選択される", key="sku_select")
     raw_filtered = filter_data_sequentially(raw_filtered, selected_SKU=selected_SKU)
 
@@ -110,51 +94,31 @@ if auth_status:
     raw_filtered = filter_data_sequentially(raw_filtered, start_date=start_date, end_date=end_date)
 
     # Get unique product information for the selected Syuyaku
-    raw_unique = raw.unique(subset=['Department', 'Syuyaku', 'SKU', 'Color', 'Size', 'Length'])
-    raw_unique = raw_unique.select(['Department', 'Syuyaku', 'Tanpin', 'Color', 'Size', 'Length'])
+    raw_unique = raw.unique(subset=['Department', 'Syuyaku', 'SKU', 'Color', 'Size', 'Length']).select(['Department', 'Syuyaku', 'Tanpin', 'Color', 'Size', 'Length'])
     ProductInfo = raw_unique.filter(pl.col('Syuyaku') == selected_Syuyaku)
-
-    # Polars DataFrameからPandas DataFrameへの変換を修正
     ProductInfoDF = ProductInfo.to_pandas()
-    ProductInfoDF.columns = ['部門', '販売集約', '単品', 'カラー', 'サイズ', 'レングス']
-
-    # NaN値の処理を追加
-    ProductInfoDF = ProductInfoDF.fillna('')  # NaN値を空文字列に変換
+    ProductInfoDF.columns = ['部門', '販売集約', '単品', 'カラー',  'サイズ',  'レングス']
 
     # Filter summary tables for selected Syuyaku
-    AccuracySummaryDF = AccuracySummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:].fillna('')
-    ProblemSummaryDF = ProblemSummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:].fillna('')
+    AccuracySummaryDF = AccuracySummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:]
+    ProblemSummaryDF = ProblemSummary.query('Syuyaku == @selected_Syuyaku').iloc[:, 1:]
 
     st.title('商品属性情報')
-    try:
-        ui.table(ProductInfoDF)
-    except Exception as e:
-        st.error(f"テーブル表示エラー: {str(e)}")
-        st.write(ProductInfoDF)  # フォールバックとして標準のStreamlit表示を使用
+    ui.table(ProductInfoDF)
 
     st.title("精度サマリ")
-    try:
-        ui.table(AccuracySummaryDF)
-    except Exception as e:
-        st.error(f"テーブル表示エラー: {str(e)}")
-        st.write(AccuracySummaryDF)
+    ui.table(AccuracySummaryDF)       
     
     st.title("既存課題検知結果サマリ")
-    try:
-        ui.table(ProblemSummaryDF)
-    except Exception as e:
-        st.error(f"テーブル表示エラー: {str(e)}")
-        st.write(ProblemSummaryDF)
+    ui.table(ProblemSummaryDF)
     
     st.title("課題検知のための情報の可視化")
 
-    # データ変換とプロット生成を最適化
-    df_disp, df_real, df_pred, transform_timings = cached_prepare_visualization_data(
-        raw_filtered, dateInfo, rate, selected_Region, selected_Syuyaku
-    )
-
     # Measure data transformation time
     start_time = time.time()
+    df_disp, df_real, df_pred, transform_timings = prepare_visualization_data(
+        raw_filtered, dateInfo, rate, selected_Region, selected_Syuyaku
+    )
     total_transform_time = time.time() - start_time
     timing_stats['データ変換処理 (全体)'] = total_transform_time
     timing_stats['データ変換処理 (その他)'] = total_transform_time - sum(transform_timings.values())

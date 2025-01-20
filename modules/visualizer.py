@@ -5,39 +5,39 @@ import numpy as np
 import time
 from functools import lru_cache
 
-# グローバル変数として定義して再利用
-PLOT_STYLE = None
-
 @lru_cache(maxsize=1)
 def setup_plot_style():
     """Setup common plot styles and colors with caching"""
-    global PLOT_STYLE
-    if PLOT_STYLE is None:
-        PLOT_STYLE = {
-            'sales': '#B02A29',
-            'prediction': '#00A1E4',
-            'purple': 'purple',
-            'orange': 'orange',
-            'black': 'black',
-            'stock_colors': ['#E4C087', '#F3F3E0'],
-            'size_colors': ['#133E87', '#CBDCEB', '#BC7C7C', '#F6EFBD']
-        }
-    return PLOT_STYLE
+    return {
+        'sales': '#B02A29',
+        'prediction': '#00A1E4',
+        'purple': 'purple',
+        'orange': 'orange',
+        'black': 'black',
+        'stock_colors': ['#E4C087', '#F3F3E0'],
+        'size_colors': ['#133E87', '#CBDCEB', '#BC7C7C', '#F6EFBD']
+    }
 
 def create_dashboard_figure(df_disp, df_real, df_pred, color_cols, size_cols, select_date='2023-10-03'):
-    """最適化されたダッシュボード図の作成"""
+    """Create the main dashboard figure with all subplots"""
     colors = setup_plot_style()
     plot_timings = {}
     
+    # 共通の設定を一度に行う
+    plt.rcParams.update({
+        'figure.dpi': 300,
+        'figure.figsize': (22, 36),
+        'font.size': 8,
+        'axes.titlesize': 16,
+        'axes.titleweight': 'bold'
+    })
+    
     # サブプロットの作成を最適化
-    fig, axes = plt.subplots(nrows=13, ncols=1, figsize=(22, 36), dpi=300,
+    fig, axes = plt.subplots(nrows=13, ncols=1, 
                             gridspec_kw={'hspace': 0.6, 
-                                       'height_ratios': (0.5, 0.5, 0.5, 0.2, 1.5, 0.2, 1.2, 0.2, 1.2, 0.1, 1.5, 0.5, 1.5)})
+                                       'height_ratios': [0.5, 0.5, 0.5, 0.2, 1.5, 0.2, 1.2, 0.2, 1.2, 0.1, 1.5, 0.5, 1.5]})
     
-    # データの事前計算
-    dates = df_disp['Date'].values
-    
-    # 共通の設定をまとめて適用
+    # 共通の軸設定を一括適用
     for ax in axes:
         if not ax.get_visible():  # スペーシング用の非表示軸はスキップ
             continue
@@ -45,36 +45,32 @@ def create_dashboard_figure(df_disp, df_real, df_pred, color_cols, size_cols, se
         ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=6))
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
     
-    # プロット関数の最適化例（在庫プロット）
-    def optimized_plot_stock(ax, df, cols, colors_list, title):
-        data = np.array([df[col].values for col in cols])
-        bottom = np.zeros(len(dates))
-        for i, row in enumerate(data):
-            ax.bar(dates, row, bottom=bottom, color=colors_list[i], 
-                  edgecolor=colors_list[i], width=0.5, label=cols[i], alpha=0.5)
-            bottom += row
-        ax.set_title(title, fontsize=16, fontweight='bold', color='black')
-        ax.legend(loc='upper left', bbox_to_anchor=(1.005, 1), borderaxespad=0, frameon=False)
-    
-    # 各プロットの実行
+    # プロット関数とその引数のマッピング
     plot_functions = [
         (plot_limited_results, [axes[0], df_disp, colors]),
         (plot_holidays, [axes[1], df_disp, colors]),
         (plot_temperature, [axes[2], df_disp, colors]),
         (plot_sales_prediction, [axes[4], df_disp, df_real, df_pred, colors]),
-        (lambda ax, df, cols: optimized_plot_stock(ax, df, cols, colors['stock_colors'], "在庫数(色別)"),
-         [axes[6], df_disp, color_cols]),
-        (lambda ax, df, cols: optimized_plot_stock(ax, df, cols, colors['size_colors'], "在庫数(サイズ別)"),
-         [axes[8], df_disp, size_cols]),
+        (plot_stock_by_color, [axes[6], df_disp, color_cols, colors]),
+        (plot_stock_by_size, [axes[8], df_disp, size_cols, colors]),
         (plot_out_of_stock, [axes[10], df_disp, colors]),
         (plot_customers, [axes[11], df_disp, colors]),
         (plot_selling_stores, [axes[12], df_disp, colors])
     ]
     
+    # 各プロット関数を実行し、タイミングを記録
     for func, args in plot_functions:
         start = time.time()
         func(*args)
         plot_timings[func.__name__] = time.time() - start
+    
+    # スペーシング用の軸を非表示に
+    for i in [3, 5, 7, 9]:
+        axes[i].axis('off')
+    
+    # x軸ラベルの重複を防ぐ
+    for ax in [axes[0], axes[1], axes[10], axes[11]]:
+        ax.label_outer()
     
     return fig, plot_timings
 
@@ -128,22 +124,21 @@ def plot_sales_prediction(ax, df_disp, df_real, df_pred, colors):
     ax.tick_params(axis='x', rotation=90, labelsize=8)
 
 def plot_stock_by_color(ax, df_disp, color_cols, colors):
-    """Plot stock by color subplot"""
-    bar_width = 0.5
-    bottom_values = np.zeros(len(df_disp['Date']))
+    """Plot stock by color subplot with optimized performance"""
+    dates = df_disp['Date'].values  # NumPy配列に変換して再利用
+    bottom = np.zeros(len(dates))
     
     for i, color in enumerate(color_cols):
-        ax.bar(df_disp['Date'], df_disp[color], bottom=bottom_values,
-               color=colors['stock_colors'][i], edgecolor=colors['stock_colors'][i], 
-               width=bar_width, label=color, alpha=0.5)
-        bottom_values += df_disp[color]
+        values = df_disp[color].values  # NumPy配列に変換
+        ax.bar(dates, values, bottom=bottom,
+               color=colors['stock_colors'][i], 
+               edgecolor=colors['stock_colors'][i], 
+               width=0.5, label=color, alpha=0.5)
+        bottom += values
     
-    ax.set_title("在庫数(色別)", fontsize=16, fontweight='bold', color='black')
+    ax.set_title("在庫数(色別)")
     ax.legend(loc='upper left', bbox_to_anchor=(1.005, 1), borderaxespad=0, frameon=False)
     ax.set_ylabel('Color')
-    ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=6))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.tick_params(axis='x', rotation=90, labelsize=8)
 
 def plot_stock_by_size(ax, df_disp, size_cols, colors):
     """Plot stock by size subplot"""
